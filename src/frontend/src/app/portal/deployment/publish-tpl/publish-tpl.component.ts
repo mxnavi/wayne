@@ -88,8 +88,13 @@ export class PublishDeploymentTplComponent {
         deploymentTpl.status.map(state => {
           const clusterMeta = new ClusterMeta(false);
           clusterMeta.value = replicas[state.cluster];
-          this.clusterMetas[state.cluster] = clusterMeta;
-          this.clusters.push(state.cluster);
+          let key  = state.cluster
+          // 集群名字 “DEV-”、“FAT-”、“UAT-”、“TEST-” 开头的 可以让开发进行部署
+          // 集群名字 其他名字 需要有 create 下线权限的人才可以部署
+          if (key.startsWith("DEV-") || key.startsWith("FAT-") || key.startsWith("UAT-") || key.startsWith("TEST-")|| this.authService.currentAppPermission.deployment.create) {
+            this.clusterMetas[key] = clusterMeta;
+            this.clusters.push(key);
+          }
         });
       } else {
         Object.getOwnPropertyNames(replicas).map(key => {
