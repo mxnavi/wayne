@@ -13,6 +13,9 @@ import { defaultResources, ResourcesActionType } from '../../../shared/shared.co
 import { PublishStatusService } from '../../../shared/client/v1/publishstatus.service';
 import { DeploymentClient } from '../../../shared/client/v1/kubernetes/deployment';
 import { ActivatedRoute } from '@angular/router';
+import { Observable } from 'rxjs/Observable';
+import { AppService } from '../../../shared/client/v1/app.service';
+import { AuthService } from '../../../shared/auth/auth.service';
 
 @Component({
   selector: 'publish-tpl',
@@ -39,6 +42,7 @@ export class PublishDeploymentTplComponent {
               public cacheService: CacheService,
               private route: ActivatedRoute,
               private publishStatusService: PublishStatusService,
+              private authService: AuthService,
               private deploymentClient: DeploymentClient) {
   }
 
@@ -84,8 +88,13 @@ export class PublishDeploymentTplComponent {
         deploymentTpl.status.map(state => {
           const clusterMeta = new ClusterMeta(false);
           clusterMeta.value = replicas[state.cluster];
-          this.clusterMetas[state.cluster] = clusterMeta;
-          this.clusters.push(state.cluster);
+          let key  = state.cluster
+          // 集群名字 “DEV-”、“FAT-”、“UAT-”、“TEST-” 开头的 可以让开发进行部署
+          // 集群名字 其他名字 需要有 create 下线权限的人才可以部署
+          if (key.startsWith("DEV-") || key.startsWith("FAT-") || key.startsWith("UAT-") || key.startsWith("TEST-")|| this.authService.currentAppPermission.deployment.create) {
+            this.clusterMetas[key] = clusterMeta;
+            this.clusters.push(key);
+          }
         });
       } else {
         Object.getOwnPropertyNames(replicas).map(key => {
@@ -94,8 +103,12 @@ export class PublishDeploymentTplComponent {
             // 后端配置的集群才会显示出来
             const clusterMeta = new ClusterMeta(false);
             clusterMeta.value = replicas[key];
-            this.clusterMetas[key] = clusterMeta;
-            this.clusters.push(key);
+            // 集群名字 “DEV-”、“FAT-”、“UAT-”、“TEST-” 开头的 可以让开发进行部署
+            // 集群名字 其他名字 需要有 create 下线权限的人才可以部署
+            if (key.startsWith("DEV-") || key.startsWith("FAT-") || key.startsWith("UAT-") || key.startsWith("TEST-")|| this.authService.currentAppPermission.deployment.create) {
+              this.clusterMetas[key] = clusterMeta;
+              this.clusters.push(key);
+            }
           }
         });
       }
